@@ -5,6 +5,8 @@ class Tables {
     const TABLA_COMPETENCIA = "competencia";
     const TABLA_INSTITUCION = "institucion";
     const TABLA_INSTITUCION_NADADOR = "institucion_nadador";
+    const TABLA_COMPTENCIA_EVENTO = "competencia_evento";
+    const TABLA_LOGS = "logs";
     
     public static function create() {
         $tableDe=Roles::$tableName;
@@ -59,9 +61,13 @@ class Tables {
             "(".
                 Nadador::$cedula.$espacio.$typeBigInteger.$espacio.$primaryKey.$coma.
                 Nadador::$nadador.$espacio.$typeText.$coma.
+                Nadador::$primer_nombre.$espacio.$typeText.$coma.
+                Nadador::$segundo_nombre.$espacio.$typeText.$coma.
+                Nadador::$primer_apellido.$espacio.$typeText.$coma.
+                Nadador::$segundo_apellido.$espacio.$typeText.$coma.
                 Nadador::$nombres.$espacio.$typeText.$coma.
                 Nadador::$apellidos.$espacio.$typeText.$coma.
-                Nadador::$fecha_nacimiento.$espacio.$typeText.$coma.
+                Nadador::$fecha_nacimiento.$espacio.$typeDate.$coma.
                 Nadador::$genero.$espacio.$typeText.$coma.
                 Nadador::$grupo.$espacio.$typeInteger.
             ")"
@@ -70,7 +76,7 @@ class Tables {
             "(".
                 Tiempos::$id.$espacio.$typeInteger.$espacio.$primaryKeyAutoIncrement.$coma.
                 Tiempos::$cedula.$espacio.$typeBigInteger.$coma.
-                Tiempos::$fecha.$espacio.$typeText.$coma.
+                Tiempos::$fecha.$espacio.$typeDate.$coma.
                 Tiempos::$prueba.$espacio.$typeText.$coma.
                 Tiempos::$metros.$espacio.$typeText.$coma.
                 Tiempos::$tiempo.$espacio.$typeText.
@@ -93,27 +99,32 @@ class Tables {
                 id INTEGER PRIMARY KEY AUTO_INCREMENT, 
                 id_evento INTEGER, 
                 numero INTEGER, 
+                carril INTEGER, 
                 cedula INTEGER, 
                 nadador TEXT, 
-                institucion TEXT, 
+                id_institucion INTEGER, 
                 tiempo TEXT, 
                 descalificado INTEGER DEFAULT 0, 
                 puntos INTEGER, 
                 lugar INTEGER, 
                 premiado INTEGER DEFAULT 1
             )",
+
             "CREATE TABLE IF NOT EXISTS " . self::TABLA_EVENTO . " (
                 id INTEGER PRIMARY KEY AUTO_INCREMENT, 
                 id_competencia INTEGER, 
                 numero INTEGER, 
+                name TEXT, 
                 prueba TEXT, 
+                metros TEXT, 
                 categoria TEXT, 
                 genero TEXT
             )",
+            
             "CREATE TABLE IF NOT EXISTS " . self::TABLA_COMPETENCIA . " (
                 id INTEGER PRIMARY KEY AUTO_INCREMENT, 
                 nombre TEXT, 
-                fecha TEXT
+                fecha DATE
             )",
             "CREATE TABLE IF NOT EXISTS " . self::TABLA_INSTITUCION . " (
                 id INTEGER PRIMARY KEY AUTO_INCREMENT, 
@@ -123,12 +134,31 @@ class Tables {
                 id INTEGER PRIMARY KEY AUTO_INCREMENT, 
                 id_nadador INTEGER, 
                 id_institucion INTEGER, 
-                nivel TEXT, 
+                id_competencia INTEGER, 
                 categoria TEXT, 
                 configCheck TEXT
+            )",
+            "CREATE TABLE IF NOT EXISTS " . self::TABLA_COMPTENCIA_EVENTO . " (
+                id INTEGER PRIMARY KEY AUTO_INCREMENT, 
+                id_competencia INTEGER, 
+                numero INTEGER, 
+                name TEXT, 
+                metros TEXT, 
+                prueba TEXT, 
+                categoriaName TEXT,
+                categoriaValues TEXT,
+                genero TEXT
+            )",
+            "CREATE TABLE IF NOT EXISTS " . self::TABLA_LOGS . " (
+                id INTEGER PRIMARY KEY AUTO_INCREMENT, 
+                httpMethod TEXT, 
+                action TEXT, 
+                endPoint TEXT, 
+                description TEXT, 
+                system TEXT, 
+                date DATE DEFAULT CURRENT_TIMESTAMP
             )"
         );
-
         // Ejecutar cada sentencia SQL
         foreach ($sentencias_sql as $sentencia) {
             $statement = Flight::db()->prepare($sentencia);
@@ -148,11 +178,13 @@ class Tables {
             "DROP TABLE IF EXISTS " . Tiempos::$tableName,
             "DROP TABLE IF EXISTS " . Metros::$tableName,
             "DROP TABLE IF EXISTS " . Pruebas::$tableName,
-            // "DROP TABLE IF EXISTS " . self::TABLA_SERIE,
-            // "DROP TABLE IF EXISTS " . self::TABLA_EVENTO,
-            // "DROP TABLE IF EXISTS " . self::TABLA_COMPETENCIA,
-            // "DROP TABLE IF EXISTS " . self::TABLA_INSTITUCION,
-            // "DROP TABLE IF EXISTS " . self::TABLA_INSTITUCION_NADADOR
+            "DROP TABLE IF EXISTS " . self::TABLA_SERIE,
+            "DROP TABLE IF EXISTS " . self::TABLA_EVENTO,
+            "DROP TABLE IF EXISTS " . self::TABLA_COMPETENCIA,
+            "DROP TABLE IF EXISTS " . self::TABLA_INSTITUCION,
+            "DROP TABLE IF EXISTS " . self::TABLA_INSTITUCION_NADADOR,
+            "DROP TABLE IF EXISTS " . self::TABLA_COMPTENCIA_EVENTO,
+            "DROP TABLE IF EXISTS " . self::TABLA_LOGS
         );
     
         // Ejecutar cada sentencia DELETE
@@ -175,6 +207,8 @@ class Tables {
             self::TABLA_COMPETENCIA => "SELECT * FROM " . self::TABLA_COMPETENCIA,
             self::TABLA_INSTITUCION => "SELECT * FROM " . self::TABLA_INSTITUCION,
             self::TABLA_INSTITUCION_NADADOR => "SELECT * FROM " . self::TABLA_INSTITUCION_NADADOR,
+            self::TABLA_COMPTENCIA_EVENTO => "SELECT * FROM " . self::TABLA_COMPTENCIA_EVENTO,
+            self::TABLA_LOGS => "SELECT * FROM " . self::TABLA_LOGS,
             Usuario::$tableName => "SELECT * FROM " . Usuario::$tableName,
             Cuenta::$tableName => "SELECT * FROM " . Cuenta::$tableName,
             Roles::$tableName => "SELECT * FROM " . Roles::$tableName
@@ -218,11 +252,13 @@ class Tables {
             Tiempos::$tableName,
             Metros::$tableName,
             Pruebas::$tableName,
-            // self::TABLA_SERIE,
-            // self::TABLA_EVENTO,
-            // self::TABLA_COMPETENCIA,
-            // self::TABLA_INSTITUCION,
-            // self::TABLA_INSTITUCION_NADADOR
+            self::TABLA_SERIE,
+            self::TABLA_EVENTO,
+            self::TABLA_COMPETENCIA,
+            self::TABLA_INSTITUCION,
+            self::TABLA_INSTITUCION_NADADOR,
+            self::TABLA_COMPTENCIA_EVENTO,
+            self::TABLA_LOGS
         );
     
         // Leer el contenido del archivo JSON
@@ -258,7 +294,6 @@ class Tables {
         
         echo "Datos importados correctamente.\n";
     }
-    
     
     // Función auxiliar para verificar si una tabla existe en la base de datos
     private static function tablaExists($tabla) {
